@@ -1,0 +1,153 @@
+# SPDX-License-Identifier: Apache-2.0
+"""Bake KiCad model transforms. Set ROCKET_ALIGNMENT_JOB to a JSON job file.
+
+The job is a list of footprint records, each with a models list containing
+input, output, offset, rotate, and sha256. Input files remain unchanged.
+KiCad applies negative X, Y, Z model rotations, followed by the offset.
+This tool transforms existing models. It does not create their original geometry.
+"""
+import hashlib
+import json
+import os
+import re
+from pathlib import Path
+import traceback
+import sys
+
+import FreeCAD as App
+import FreeCADGui as Gui
+import ImportGui
+import Part
+from PySide import QtCore
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from geometry_checks import compare_solids, remove_empty_faces, colored_faces, compare_face_colors
+from surface_cleanup import remove_surface_relief
+
+jobfile = Path(os.environ["ROCKET_ALIGNMENT_JOB"])
+result = {"success": False, "models": [], "freecad": App.Version(),
+          "opencascade": Part.OCC_VERSION, "python": sys.version}
+
+
+def parts(document):
+    return [o for o in document.Objects if hasattr(o, "Shape") and not o.Shape.isNull()
+            and len(o.Shape.Solids) and hasattr(o.ViewObject, "DiffuseColor")]
+
+
+try:
+    manifest = Path(__file__).resolve().parents[1] / 'transforms/kicad-alignment.json'
+    required_cleanup = {m['sha256']: m['surface_cleanup']
+                        for m in json.loads(manifest.read_text())['models']
+                        if m.get('surface_cleanup')}
+    for job in json.loads(jobfile.read_text()):
+        for model in job["models"]:
+            source, output = Path(model["input"]), Path(model["output"])
+            if hashlib.sha256(source.read_bytes()).hexdigest() != model["sha256"]:
+                raise ValueError(f"Input hash mismatch: {source.name}")
+            if (model['sha256'] in required_cleanup
+                    and model.get('surface_cleanup') != required_cleanup[model['sha256']]):
+                raise ValueError('Recorded surface cleanup is required for this input')
+            if source.resolve() == output.resolve():
+                raise ValueError("Input and output paths must differ")
+            ImportGui.open(str(source))
+            doc = App.ActiveDocument
+            objects = parts(doc)
+            if not objects:
+                raise ValueError(f"Empty model: {source.name}")
+            rx, ry, rz = model["rotate"]
+            rotation = App.Rotation(App.Vector(0, 0, 1), -rz).multiply(
+                App.Rotation(App.Vector(0, 1, 0), -ry)).multiply(
+                App.Rotation(App.Vector(1, 0, 0), -rx))
+            transform = App.Placement(App.Vector(*model["offset"]), rotation)
+            original_volumes = sorted(s.Volume for o in objects for s in o.Shape.Solids)
+            palette = sorted(set(tuple(c) for o in objects for c in o.ViewObject.DiffuseColor))
+            exported = App.newDocument("AlignedModel")
+            copies = []
+            removed_faces = 0
+            cleanup_records = []
+            for obj in objects:
+                shape = obj.Shape.copy()
+                source_colors = list(obj.ViewObject.DiffuseColor)
+                colors_for_faces = source_colors if len(source_colors) == len(shape.Faces) else [source_colors[0]]*len(shape.Faces)
+                if not shape.isValid():
+                    original_faces = list(shape.Faces)
+                    shape, removed = remove_empty_faces(shape)
+                    removed_faces += removed
+                    # Sewing can reorder faces. Match the unchanged positive-area faces.
+                    indices = [i for i,f in enumerate(original_faces) if f.Area > 1e-12]
+                    mapped = []
+                    for face in shape.Faces:
+                        idx = min(indices, key=lambda i: (original_faces[i].CenterOfMass-face.CenterOfMass).Length + abs(original_faces[i].Area-face.Area))
+                        if (original_faces[idx].CenterOfMass-face.CenterOfMass).Length > 1e-6:
+                            raise ValueError('Cannot preserve face colors after sewing')
+                        mapped.append(colors_for_faces[idx])
+                        indices.remove(idx)
+                    colors_for_faces = mapped
+                shape.transformShape(transform.toMatrix(), True)
+                if model.get("surface_cleanup"):
+                    shape, colors_for_faces, cleanup = remove_surface_relief(shape, colors_for_faces, model["surface_cleanup"])
+                    cleanup_records.append(cleanup)
+                copied = exported.addObject("PartDesign::Feature", obj.Name)
+                copied.Label = obj.Label
+                copied.Shape = shape
+                copied.ViewObject.ShapeColor = obj.ViewObject.ShapeColor
+                copied.ViewObject.DiffuseColor = colors_for_faces
+                copies.append(copied)
+            exported.recompute()
+            palette = sorted(set(tuple(c) for o in copies for c in o.ViewObject.DiffuseColor))
+            expected_colors = colored_faces(copies)
+            expected = Part.makeCompound([o.Shape for o in copies]).copy()
+            before = sorted(s.Volume for s in expected.Solids)
+            output.parent.mkdir(parents=True, exist_ok=True)
+            ImportGui.export(copies, str(output))
+            App.closeDocument(exported.Name)
+            App.closeDocument(doc.Name)
+            # Retain upstream attribution and source information during re-export.
+            header = source.read_text(errors="replace").split("DATA;", 1)[0]
+            header = header.replace("/*", "").replace("*/", "")
+            text = re.sub(r"FILE_NAME\(\s*'[^']*'", "FILE_NAME('" + output.name + "'", output.read_text(), count=1)
+            text = text.replace("HEADER;", "HEADER;\n/* Original source header:\n" + header + "\n*/", 1)
+            output.write_text("\n".join(line.rstrip() for line in text.splitlines()) + "\n")
+            ImportGui.open(str(output))
+            doc = App.ActiveDocument
+            objects = parts(doc)
+            if not objects or not all(o.Shape.isValid() for o in objects):
+                raise ValueError(f"Invalid exported solids: {source.name}")
+            after = sorted(s.Volume for o in objects for s in o.Shape.Solids)
+            colors = sorted(set(tuple(c) for o in objects for c in o.ViewObject.DiffuseColor))
+            if len(before) != len(after):
+                raise ValueError(f"Volume mismatch: {source.name}: {before} vs {after}")
+            if colors != palette:
+                raise ValueError(f"Color mismatch: {source.name}")
+            checked_faces = compare_face_colors(expected_colors, colored_faces(objects))
+            actual = Part.makeCompound([o.Shape for o in objects])
+            comparisons = compare_solids(expected, actual)
+            difference = sum(c['boolean_difference_mm3'] for c in comparisons
+                             if not c['analytic_cylinder'])
+            e, a = expected.optimalBoundingBox(False), actual.optimalBoundingBox(False)
+            if any(abs(getattr(e, k)-getattr(a, k)) > 1e-5
+                   for k in ("XMin", "XMax", "YMin", "YMax", "ZMin", "ZMax")):
+                raise ValueError(f"Bounds mismatch: {source.name}: {e} vs {a}")
+            result["models"].append({"input": source.name, "sha256": model["sha256"],
+                                      "output": output.name, "output_sha256": hashlib.sha256(output.read_bytes()).hexdigest(),
+                                      "offset": model["offset"],
+                                      "rotate": model["rotate"], "objects": len(objects),
+                                      "solids_valid": all(o.Shape.isValid() for o in objects),
+                                      "symmetric_difference_mm3": difference,
+                                      "original_volume_mm3": sum(original_volumes),
+                                      "aligned_volume_mm3": sum(after),
+                                      "integration_volume_drift_mm3": sum(after)-sum(before),
+                                      "solid_comparisons": comparisons,
+                                      "removed_zero_area_faces": removed_faces,
+                                      "surface_cleanup": cleanup_records,
+                                      "verified_colored_faces": checked_faces,
+                                      "bounds": [a.XMin,a.YMin,a.ZMin,a.XMax,a.YMax,a.ZMax]})
+            App.closeDocument(doc.Name)
+            jobfile.with_suffix(".progress.json").write_text(json.dumps(result, indent=2) + "\n")
+    result["success"] = True
+except Exception:
+    result["error"] = traceback.format_exc()
+finally:
+    jobfile.with_suffix(".result.json").write_text(json.dumps(result, indent=2) + "\n")
+    for name in list(App.listDocuments()):
+        App.closeDocument(name)
+    QtCore.QTimer.singleShot(0, lambda: Gui.getMainWindow().close())

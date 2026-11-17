@@ -31,14 +31,21 @@ def main():
             str(p.relative_to(root)): hashlib.sha256(p.read_bytes()).hexdigest()
             for p in sorted(meta.parent.iterdir()) if p.is_file()
         }
-        if args.baseline:
+        if args.baseline and model.get("baseline_sha256"):
             baseline = (args.baseline / model["output"]).resolve()
+            destination = (args.output / model["output"]).resolve()
+            if destination == baseline or (destination.exists() and destination.samefile(baseline)):
+                parser.error("Output would overwrite a baseline model")
             if hashlib.sha256(baseline.read_bytes()).hexdigest() != model["baseline_sha256"]:
                 raise ValueError(f"Baseline hash mismatch: {model['name']}")
             model["baseline"] = str(baseline)
         models.append(model)
     if not models or (args.model and set(args.model) - {m["name"] for m in models}):
         parser.error("Unknown model selection")
+    tool_hashes = {str(p.relative_to(root)): hashlib.sha256(p.read_bytes()).hexdigest()
+                   for p in sorted((root / "tools").iterdir()) if p.is_file()}
+    revision = subprocess.check_output(["git", "-C", str(root), "rev-parse", "HEAD"], text=True).strip()
+    dirty = bool(subprocess.check_output(["git", "-C", str(root), "status", "--porcelain"], text=True).strip())
     args.output.mkdir(parents=True, exist_ok=True)
     output = args.output.resolve()
     with tempfile.TemporaryDirectory(prefix="model-build-") as tmp:
@@ -57,6 +64,11 @@ def main():
         if not receipt.exists():
             raise RuntimeError(f"FreeCAD produced no result (exit {proc.returncode}); see freecad.log")
         result = json.loads(receipt.read_text())
+        recorded = dict(tool_hashes)
+        for model in models:
+            recorded.update(model["input_hashes"])
+        if any(hashlib.sha256((root/p).read_bytes()).hexdigest() != digest for p,digest in recorded.items()):
+            result.update(success=False, error="Source changed during generation")
         if proc.returncode or not result["success"]:
             (output / "failed-result.json").write_text(json.dumps(result, indent=2) + "\n")
             raise RuntimeError(result.get("error", f"FreeCAD exit {proc.returncode}"))
@@ -65,14 +77,9 @@ def main():
                 src, dst = work / relative, output / relative
                 dst.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(src, dst)
-        result["source_commit"] = subprocess.check_output(
-            ["git", "-C", str(root), "rev-parse", "HEAD"], text=True).strip()
-        result["source_dirty"] = bool(subprocess.check_output(
-            ["git", "-C", str(root), "status", "--porcelain"], text=True).strip())
-        result["tool_hashes"] = {
-            str(p.relative_to(root)): hashlib.sha256(p.read_bytes()).hexdigest()
-            for p in sorted((root / "tools").iterdir()) if p.is_file()
-        }
+        result["source_commit"] = revision
+        result["source_dirty"] = dirty
+        result["tool_hashes"] = tool_hashes
         (output / "result.json").write_text(json.dumps(result, indent=2) + "\n")
     print(f"Verified {len(models)} models: {output / 'result.json'}")
 

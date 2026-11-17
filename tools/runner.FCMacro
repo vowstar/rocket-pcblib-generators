@@ -17,6 +17,8 @@ from PySide import QtCore
 job = json.loads(Path(os.environ["ROCKET_MODEL_JOB"]).read_text())
 work = Path(job["work"])
 sys.path.insert(0, str(Path(job["root"]) / "tools"))
+from geometry_checks import colored_faces, compare_face_colors
+
 result = {"success": False, "freecad": App.Version(), "python": sys.version,
           "opencascade": Part.OCC_VERSION, "models": []}
 
@@ -37,7 +39,7 @@ def inspect(path):
               "solids": sum(len(o.Shape.Solids) for o in objects),
               "volumes": sorted(s.Volume for o in objects for s in o.Shape.Solids),
               "colors": colors}
-    return doc, compound.copy(), values
+    return doc, compound.copy(), values, colored_faces(objects)
 
 
 try:
@@ -47,9 +49,13 @@ try:
         runpy.run_path(model["source"])["build"](output)
         if not output.is_file() or output.stat().st_size == 0:
             raise ValueError(f"Missing export: {model['name']}")
-        doc, shape, values = inspect(output)
+        doc, shape, values, face_colors = inspect(output)
         if abs(values["bounds"][2]) > 1e-6:
             raise ValueError(f"Contact plane is not Z=0: {model['name']}")
+        if model.get("expected_bounds") and any(abs(a-b) > 1e-6 for a,b in zip(values["bounds"], model["expected_bounds"])):
+            raise ValueError(f"Dimension mismatch: {model['name']}")
+        if model.get("expected_solids") and values["solids"] != model["expected_solids"]:
+            raise ValueError(f"Solid count mismatch: {model['name']}")
         preview = work / "previews" / (model["name"] + ".png")
         preview.parent.mkdir(exist_ok=True)
         Gui.activeDocument().activeView().viewAxonometric()
@@ -57,7 +63,8 @@ try:
         Gui.activeDocument().activeView().saveImage(str(preview), 1000, 750, "White")
         App.closeDocument(doc.Name)
         if model.get("baseline"):
-            doc, reference, before = inspect(Path(model["baseline"]))
+            doc, reference, before, reference_colors = inspect(Path(model["baseline"]))
+            values["verified_colored_faces"] = compare_face_colors(reference_colors, face_colors)
             if values["solids"] != before["solids"] or values["colors"] != before["colors"]:
                 raise ValueError(f"Solid/color mismatch: {model['name']}")
             for field in ("bounds", "volumes"):

@@ -1,0 +1,7 @@
+name = "TechPublic_USON-10_2.5x1.0mm_P0.5mm"
+category = "CHIPSAlliance_Package_SON"
+output = "CHIPSAlliance_Package_SON.3dshapes/TechPublic_USON-10_2.5x1.0mm_P0.5mm.step"
+license = "Apache-2.0"
+dimensional_reference = "https://atta.szlcsc.com/upload/public/pdf/source/20210810/AE3DE9AC94AD2A317FD9BEA10653400F.pdf"
+expected_bounds = [-1.25, -0.5, 0.0, 1.25, 0.5, 0.58]
+expected_solids = 11
