@@ -1,0 +1,8 @@
+name = "WCH_CH347F_QFN-28-1EP_4x4mm_P0.4mm_EP2.7x2.7mm"
+category = "CHIPSAlliance_Package_DFN_QFN"
+output = "CHIPSAlliance_Package_DFN_QFN.3dshapes/WCH_CH347F_QFN-28-1EP_4x4mm_P0.4mm_EP2.7x2.7mm.step"
+license = "Apache-2.0"
+original_source_sha256 = "a3b2b4fb54697ecc988d5863a45222bdc5b3699748efbf9dbe20b8dae241d6a3"
+source_record = "CH347F_SOURCE.md"
+baseline_commit = "a4e49bb8fbc71fd3b4b203885a558c3291cebf62"
+baseline_sha256 = "69bb9340e209dd413a4e62d58fdda2a49be0eef84c9db0048853c9ecf7e3672f"

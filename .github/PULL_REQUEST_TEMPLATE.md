@@ -1,0 +1,4 @@
+- [ ] Source references, authorship, license, and model assumptions are recorded.
+- [ ] Generation succeeds in the documented environment.
+- [ ] Dimensions, orientation, terminals, solids, and colors are checked.
+- [ ] Build outputs and machine-specific files are excluded from the commit.

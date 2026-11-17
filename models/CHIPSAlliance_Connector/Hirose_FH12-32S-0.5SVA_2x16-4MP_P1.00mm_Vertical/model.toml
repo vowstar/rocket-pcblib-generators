@@ -1,0 +1,8 @@
+name = "Hirose_FH12-32S-0.5SVA_2x16-4MP_P1.00mm_Vertical"
+category = "CHIPSAlliance_Connector"
+output = "CHIPSAlliance_Connector.3dshapes/Hirose_FH12-32S-0.5SVA_2x16-4MP_P1.00mm_Vertical.step"
+license = "Apache-2.0"
+original_source_sha256 = "a3b2b4fb54697ecc988d5863a45222bdc5b3699748efbf9dbe20b8dae241d6a3"
+source_record = "FH12_VERTICAL_SOURCE.md"
+baseline_commit = "a4e49bb8fbc71fd3b4b203885a558c3291cebf62"
+baseline_sha256 = "beb54527df3e984a074e1b3ee42525c396e2b219164e4bac04d43ceb1adb634a"

@@ -1,0 +1,82 @@
+# SPDX-License-Identifier: Apache-2.0
+"""FreeCAD worker. Invoked by tools/generate.py."""
+import hashlib
+import json
+import os
+from pathlib import Path
+import runpy
+import sys
+import traceback
+
+import FreeCAD as App
+import FreeCADGui as Gui
+import ImportGui
+import Part
+from PySide import QtCore
+
+job = json.loads(Path(os.environ["ROCKET_MODEL_JOB"]).read_text())
+work = Path(job["work"])
+sys.path.insert(0, str(Path(job["root"]) / "tools"))
+result = {"success": False, "freecad": App.Version(), "python": sys.version,
+          "opencascade": Part.OCC_VERSION, "models": []}
+
+
+def inspect(path):
+    ImportGui.open(str(path))
+    doc = App.ActiveDocument
+    objects = [o for o in doc.Objects if hasattr(o, "Shape") and not o.Shape.isNull()
+               and len(o.Shape.Solids) and hasattr(o.ViewObject, "ShapeColor")]
+    if not objects or not all(o.Shape.isValid() for o in objects):
+        raise ValueError(f"Invalid or empty STEP: {path.name}")
+    compound = Part.makeCompound([o.Shape for o in objects])
+    bounds = compound.BoundBox
+    colors = sorted(set(tuple(round(float(c), 5) for c in color)
+                        for o in objects for color in o.ViewObject.DiffuseColor))
+    values = {"bounds": [bounds.XMin, bounds.YMin, bounds.ZMin,
+                         bounds.XMax, bounds.YMax, bounds.ZMax],
+              "solids": sum(len(o.Shape.Solids) for o in objects),
+              "volumes": sorted(s.Volume for o in objects for s in o.Shape.Solids),
+              "colors": colors}
+    return doc, compound.copy(), values
+
+
+try:
+    for model in job["models"]:
+        output = work / model["output"]
+        output.parent.mkdir(parents=True, exist_ok=True)
+        runpy.run_path(model["source"])["build"](output)
+        if not output.is_file() or output.stat().st_size == 0:
+            raise ValueError(f"Missing export: {model['name']}")
+        doc, shape, values = inspect(output)
+        if abs(values["bounds"][2]) > 1e-6:
+            raise ValueError(f"Contact plane is not Z=0: {model['name']}")
+        preview = work / "previews" / (model["name"] + ".png")
+        preview.parent.mkdir(exist_ok=True)
+        Gui.activeDocument().activeView().viewAxonometric()
+        Gui.activeDocument().activeView().fitAll()
+        Gui.activeDocument().activeView().saveImage(str(preview), 1000, 750, "White")
+        App.closeDocument(doc.Name)
+        if model.get("baseline"):
+            doc, reference, before = inspect(Path(model["baseline"]))
+            if values["solids"] != before["solids"] or values["colors"] != before["colors"]:
+                raise ValueError(f"Solid/color mismatch: {model['name']}")
+            for field in ("bounds", "volumes"):
+                if any(abs(a-b) > 1e-5 for a,b in zip(values[field], before[field])):
+                    raise ValueError(f"{field} mismatch: {model['name']}")
+            difference = shape.cut(reference).Volume + reference.cut(shape).Volume
+            if difference > 1e-5:
+                raise ValueError(f"Geometry mismatch: {model['name']}: {difference}")
+            values["symmetric_difference_mm3"] = difference
+            values["baseline_sha256"] = model["baseline_sha256"]
+            App.closeDocument(doc.Name)
+        values.update(name=model["name"], output=model["output"], input_hashes=model["input_hashes"],
+                      sha256=hashlib.sha256(output.read_bytes()).hexdigest())
+        result["models"].append(values)
+    result["success"] = True
+except Exception:
+    result["error"] = traceback.format_exc()
+finally:
+    (work / "result.json").write_text(json.dumps(result, indent=2) + "\n")
+    for name in list(App.listDocuments()):
+        App.closeDocument(name)
+    QtCore.QTimer.singleShot(0, lambda: Gui.getMainWindow().close())
