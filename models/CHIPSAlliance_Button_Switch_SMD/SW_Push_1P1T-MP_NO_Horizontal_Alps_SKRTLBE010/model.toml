@@ -1,0 +1,29 @@
+name = "SW_Push_1P1T-MP_NO_Horizontal_Alps_SKRTLBE010"
+category = "CHIPSAlliance_Button_Switch_SMD"
+output = "CHIPSAlliance_Button_Switch_SMD.3dshapes/SW_Push_1P1T-MP_NO_Horizontal_Alps_SKRTLBE010.step"
+license = "Apache-2.0"
+dimensional_reference = "https://tech.alpsalpine.com/e/products/detail/SKRTLBE010/"
+appearance_reference = "https://www.lcsc.com/product-image/C127481.html?whichImg=0"
+expected_bounds = [-2.25, -2.04, 0.0, 2.25, 1.60, 3.30]
+expected_solids = 6
+
+# Colors are stored in STEP. Metalness and roughness are for rendered previews.
+[materials.faceplate]
+srgb = [0.77, 0.78, 0.795]
+metallic = 0.94
+roughness = 0.28
+
+[materials.housing]
+srgb = [0.145, 0.151, 0.17]
+metallic = 0.0
+roughness = 0.63
+
+[materials.actuator]
+srgb = [0.88, 0.86, 0.79]
+metallic = 0.0
+roughness = 0.51
+
+[materials.terminals]
+srgb = [0.81, 0.82, 0.825]
+metallic = 0.91
+roughness = 0.33
