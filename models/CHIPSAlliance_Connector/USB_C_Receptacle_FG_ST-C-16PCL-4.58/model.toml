@@ -1,0 +1,31 @@
+name = "USB_C_Receptacle_FG_ST-C-16PCL-4.58"
+category = "CHIPSAlliance_Connector"
+output = "CHIPSAlliance_Connector.3dshapes/USB_C_Receptacle_FG_ST-C-16PCL-4.58.step"
+license = "Apache-2.0"
+dimensional_reference = "https://datasheet.lcsc.com/datasheet/pdf/d92c6bc9c33cebdecef5aa2393552efc.pdf?productCode=C51912219"
+expected_bounds = [-2.18, -7.0, -1.32, 2.18, 7.0, 9.88]
+expected_solids = 42
+through_board_features = true
+
+appearance_reference = "https://item.szlcsc.com/54613016.html"
+
+# sRGB is exported in STEP. Metallic and roughness are for physically based previews.
+[materials.nickel]
+srgb = [0.79, 0.78, 0.76]
+metallic = 0.95
+roughness = 0.31
+
+[materials.black_lcp]
+srgb = [0.16, 0.154, 0.16]
+metallic = 0.0
+roughness = 0.57
+
+[materials.contact_gold]
+srgb = [0.86, 0.72, 0.46]
+metallic = 0.95
+roughness = 0.23
+
+[materials.gold_flash]
+srgb = [0.77, 0.73, 0.61]
+metallic = 0.92
+roughness = 0.34
