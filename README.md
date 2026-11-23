@@ -12,6 +12,7 @@ The library distributes STEP files. This repository contains their geometry cons
 | Connector | Hirose FH34SRJ-24S-0.5SH |
 | LED | Worldsemi WS2812B-1313-V6 |
 | Oscillator | YXC YSO230LR |
+| Package_DFN_QFN | Espressif ESP32-S31 QFN-80 |
 | Package_DFN_QFN | WCH CH347F |
 | Package_SON | WSON-8, 6 x 5 mm |
 | Package_SON | TI DQA0010A USON-10 |
