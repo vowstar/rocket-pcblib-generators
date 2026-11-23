@@ -1,0 +1,23 @@
+name = "Texas_RMQ0024A_WQFN-24-1EP_3x3mm_P0.4mm_EP1.9x1.9mm"
+category = "CHIPSAlliance_Package_DFN_QFN"
+output = "CHIPSAlliance_Package_DFN_QFN.3dshapes/Texas_RMQ0024A_WQFN-24-1EP_3x3mm_P0.4mm_EP1.9x1.9mm.step"
+license = "Apache-2.0"
+dimensional_reference = "https://www.ti.com/lit/ml/mpqf398a/mpqf398a.pdf"
+expected_bounds = [-1.5, -1.5, 0.0, 1.5, 1.5, 0.75]
+expected_solids = 27
+
+# Colors are stored in STEP. Metalness and roughness are for rendered previews.
+[materials.moulding]
+srgb = [0.10, 0.11, 0.12]
+metallic = 0.0
+roughness = 0.55
+
+[materials.mark]
+srgb = [0.33, 0.33, 0.34]
+metallic = 0.0
+roughness = 0.7
+
+[materials.terminals]
+srgb = [0.72, 0.73, 0.75]
+metallic = 0.9
+roughness = 0.35

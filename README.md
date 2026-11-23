@@ -10,10 +10,13 @@ The library distributes STEP files. This repository contains their geometry cons
 | Button_Switch_SMD | SAMZO C4B1802110 |
 | Connector | Hirose FH12-32S-0.5SVA |
 | Connector | Hirose FH34SRJ-24S-0.5SH |
+| Connector | Hanrun HR911105A |
+| Connector | Kangnex WJ15EDGRC-3.81-04P |
 | LED | Worldsemi WS2812B-1313-V6 |
 | Oscillator | YXC YSO230LR |
 | Package_DFN_QFN | Espressif ESP32-S31 QFN-80 |
 | Package_DFN_QFN | WCH CH347F |
+| Package_DFN_QFN | TI RMQ0024A WQFN-24 |
 | Package_SON | WSON-8, 6 x 5 mm |
 | Package_SON | TI DQA0010A USON-10 |
 | Package_SON | TECH PUBLIC DFN2510-10 |
