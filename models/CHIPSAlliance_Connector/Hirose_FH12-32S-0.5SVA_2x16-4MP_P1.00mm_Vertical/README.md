@@ -15,3 +15,4 @@ This dimensional model uses the repository Apache-2.0 license.
 
 Rectangular copper pads and separate paste apertures follow the manufacturer land pattern.
 These dimensions take priority under KLC F4.1.
+Confirm the FPC contact side before selecting this connector.

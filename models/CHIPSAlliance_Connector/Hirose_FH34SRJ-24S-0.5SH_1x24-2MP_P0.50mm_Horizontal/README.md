@@ -7,7 +7,7 @@ X = +/-6.75 mm and Y = 1.40 mm. Their outside and inside spans are 13.90 and
 13.10 mm. Separate signal paste openings are 0.25 x 0.65 mm, aligned with
 the outer edge of the copper. The recommended stencil thickness is 0.10 mm.
 The 14.0 x 3.8 mm body is 1.0 mm high. Courtyard clearance is at least
-0.25 mm from the body and pads. Pin 1 is at the right of the signal row,
+0.50 mm from the body and pads. Pin 1 is at the right of the signal row,
 as shown in the manufacturer's PCB land drawing.
 
 The connector accepts 0.30 +/-0.03 mm FPC. The standard cable drawing uses
@@ -30,6 +30,9 @@ This dimensional model uses the repository Apache-2.0 license.
 
 Footprint and model origins use the body center in XY, with the contact plane at Z=0.
 The signal row is at footprint Y=-1.10 mm.
+The origin moved by +1.10 mm in local Y from the earlier signal-row datum.
+When migrating an existing board, apply the same shift in the footprint's
+rotated coordinates to preserve pad positions.
 
 Rectangular copper pads and separate paste apertures follow the manufacturer land pattern.
 These dimensions take priority under KLC F4.1.

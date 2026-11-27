@@ -1,0 +1,9 @@
+name = "L_Sunlord_WPN252010U"
+category = "CHIPSAlliance_Inductor_SMD"
+output = "CHIPSAlliance_Inductor_SMD.3dshapes/L_Sunlord_WPN252010U.step"
+license = "Apache-2.0"
+dimensional_reference = "https://www.sunlordinc.com/uploads/files/20221122/WPN%C2%A0series%C2%A0of%C2%A0SMD%C2%A0Power%C2%A0Inductor.pdf"
+expected_bounds = [-1.25, -1.00, 0.0, 1.25, 1.00, 1.00]
+expected_solids = 3
+baseline_commit = "65886043170e74e5fc19510c0f70d7e04acbf566"
+baseline_sha256 = "57e983f9354491744afccfc85cdbfa764d3b59ac2939b483c69ca998d59974c1"

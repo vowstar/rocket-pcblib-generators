@@ -11,4 +11,12 @@ The source constructs all geometry. It does not import the previous STEP model.
 The contact plane is Z=0. Pin 1 matches the footprint's lower-left pad in KiCad top view.
 The index mark size, colors, and unmodeled internal structure do not define manufacturing tolerances.
 
+The manufacturer land pattern uses 0.20 x 0.675 mm rectangular signal
+pads at Y = +/-0.4375 mm and a 0.40 x 1.55 mm continuous ground strip.
+The footprint uses two touching copper halves numbered 3 and 8 to retain
+both pin assignments. Connect both to the same GND net. Signal paste
+matches the copper. The separate 0.40 x 1.55 mm ground aperture is a
+library stencil choice. Solder mask expansion follows the board settings.
+Use the land pattern specific to the purchased manufacturer.
+
 [Manufacturer dimensions](https://atta.szlcsc.com/upload/public/pdf/source/20210810/AE3DE9AC94AD2A317FD9BEA10653400F.pdf).

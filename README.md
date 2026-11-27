@@ -12,6 +12,7 @@ The library distributes STEP files. This repository contains their geometry cons
 | Connector | Hirose FH34SRJ-24S-0.5SH |
 | Connector | Hanrun HR911105A |
 | Connector | Kangnex WJ15EDGRC-3.81-04P |
+| Inductor_SMD | Sunlord WPN252010U |
 | LED | Worldsemi WS2812B-1313-V6 |
 | Oscillator | YXC YSO230LR |
 | Package_DFN_QFN | Espressif ESP32-S31 QFN-80 |
